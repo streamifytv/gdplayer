@@ -212,7 +212,7 @@ let allChannels = [];
                             <div class="time-indicator">${formattedTime}</div>
                         </div>
                         <div class="event-info">
-                            <div class="teams-vs">${eventName}</div>
+                            <div class="teams-vs"><marquee>${eventName}</marquee></div>
                             ${streamsHTML}
                             <div class="category-label">${event.category}</div>
                         </div>
