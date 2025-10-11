@@ -7,7 +7,340 @@
     <title>24/7 Live Sports & Entertainment Channels</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --primary-color: #039be5;
+            --secondary-color: #6c757d;
+            --dark-bg: #121212;
+            --card-bg: #1e1e1e;
+            --text-light: #f8f9fa;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #1a1a1a, #0d0d0d);
+            color: var(--text-light);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: auto !important;
+            padding-bottom: 2rem;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #039be5;
+            font-size: 20pt;
+        }
+        
+        .hero-section {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .json-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .json-table th,
+        .json-table td {
+            border: 1px solid #333;
+            padding: 12px 15px;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+        
+        .json-table th {
+            background: #2a2a2a;
+            font-weight: 600;
+            color: #039be5;
+        }
+        
+        .json-table tr:nth-child(even) {
+            background-color: rgba(40, 40, 40, 0.6);
+        }
+        
+        .json-table tr:hover {
+            background-color: rgba(50, 50, 50, 0.8);
+        }
+        
+        .expand-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            margin-right: 8px;
+            cursor: pointer;
+            color: #039be5;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .expand-icon.collapsed {
+            transform: rotate(0deg);
+        }
+        
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+        
+        .category-row {
+            background: rgba(3, 155, 229, 0.15) !important;
+            font-weight: 600;
+        }
+        
+        .event-row {
+            background: rgba(50, 50, 50, 0.7) !important;
+        }
+        
+        .channel-row {
+            background: rgba(30, 30, 30, 0.9) !important;
+        }
+        
+        .status-live {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-upcoming {
+            background: linear-gradient(135deg, #ffa500, #cc8400);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .status-completed {
+            background: linear-gradient(135deg, #808080, #606060);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .search-container {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #039be5;
+        }
+        
+        .search-input {
+            padding-left: 40px;
+            border-radius: 50px;
+            border: 2px solid transparent;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            color: white;
+        }
+        
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .result-count {
+            color: #adb5bd;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+        
+        .footer {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1.5rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .marquee-container {
+            display: flex;
+            height: 50px;
+            align-items: center;
+            border: 2px solid #29b6f6;
+            border-radius: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: transparent;
+        }
+        
+        .logo-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px 0px 0px 10px;
+            background: #29b6f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #29b6f6;
+            margin-right: 15px;
+            flex-shrink: 0;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .logo-box i {
+            color: white;
+            font-size: 16px;
+        }
+        
+        marquee {
+            flex: 1;
+            color: #039be5;
+            font-size: 18px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+        
+        .first-category {
+            background: var(--primary-color) !important;
+        }
+        
+        .stream-btn {
+            background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.8rem;
+            margin: 2px 0;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stream-btn:hover {
+            background: linear-gradient(135deg, #4a4a4a, #3a3a3a);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stream-btn i {
+            margin-right: 5px;
+            font-size: 0.75rem;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1.5rem;
+        }
+        
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            color: #ffcccc;
+        }
+        
+        /* Modal Styles */
+        #channelModal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+        
+        #channelModal .modal-content {
+            background-color: #1e1e1e;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #333;
+            width: 90%;
+            max-width: 1000px;
+            border-radius: 10px;
+            position: relative;
+        }
+        
+        #channelModal .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            z-index: 1051;
+        }
+        
+        #channelModal .close:hover,
+        #channelModal .close:focus {
+            color: #fff;
+        }
+        
+        #channelIframe {
+            width: 100%;
+            height: 70vh;
+            border: none;
+            border-radius: 8px;
+        }
+        
+        #channelTitle {
+            color: #039be5;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -98,7 +431,7 @@
 
     <footer class="footer text-center">
         <div class="container">
-            <p class="mb-0">Â© <script>document.write("2018-"+new Date().getFullYear());</script> GD PLAYER TV. All rights reserved.</p>
+            <p class="mb-0">© <script>document.write("2018-"+new Date().getFullYear());</script> GD PLAYER TV. All rights reserved.</p>
             <div class="marquee-container">
                 <div class="logo-box">
                     <i class="fas fa-warning"></i>
@@ -111,6 +444,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="bundle.js"></script>
+<script scr="bundle.js"></script>
+
 </body>
 </html>
