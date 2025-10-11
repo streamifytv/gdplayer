@@ -220,7 +220,7 @@ function getEventStatus(eventTime) {
                     channelRow.style.display = 'none';
                     channelRow.innerHTML = `
 
-                       <td colspan="2"><strong><i class="fas fa-play"></i>${ch.name}</strong></td>
+                       <td colspan="2"><strong><i class="fas fa-play"></i> ${ch.name}</strong></td>
                         <td>
                             <a href="#" class="stream-btn">
                                 <i class="fas fa-play"></i> Play
