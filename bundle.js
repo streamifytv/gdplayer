@@ -71,29 +71,21 @@
         return Array.from(map.values());
     }
 
-    function getEventStatus(eventTime) {
-        if (!eventTime) return 'Upcoming';
-        if (eventTime.toLowerCase().includes('live')) return 'LIVE';
 
-        const now = new Date();
-        let eventDate = new Date();
-        const match = eventTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
-        if (!match) return 'Upcoming';
 
-        let h = parseInt(match[1]);
-        const m = parseInt(match[2]);
-        const p = match[3];
-        if (p && p.toLowerCase() === 'pm' && h < 12) h += 12;
-        if (p && p.toLowerCase() === 'am' && h === 12) h = 0;
-        let localHours = (h + 5) % 24;
-        if (h + 5 >= 24) eventDate.setDate(eventDate.getDate() + 1);
-        eventDate.setHours(localHours, m, 0, 0);
-        const diff = eventDate - now;
-        const hrs = diff / 3600000;
-        if (hrs < -2) return 'Completed';
-        if (hrs < 0.5 && hrs > -2) return 'LIVE';
-        return 'Upcoming';
-    }
+function getEventStatus(eventTime) {
+  if (!eventTime) return "Upcoming";
+  if (eventTime.toLowerCase().includes("live")) return "LIVE";
+
+  const now = new Date();
+  const [h, m] = eventTime.split(":").map(Number);
+  const eventDate = new Date();
+
+  eventDate.setHours(h, m, 0, 0);
+
+  const hrs = (eventDate - now) / 3600000;
+  return hrs < -2 ? "Completed" : hrs < 0.5 ? "LIVE" : "Upcoming";
+}
 
     function toggleCategoryExpansion(category) {
         const safeCat = toSafeId(category);
@@ -200,11 +192,10 @@
                 eventRow.id = evId;
                 eventRow.dataset.categorySafe = safeCat;
                 eventRow.style.display = 'none';
+                let [first, last] = ev.eventName.split(/:(.+)/);
                 eventRow.innerHTML = `
-                    <td></td>
-                    <td>
-                        <span class="expand-icon">+</span>
-                        ${ev.eventName}
+                    <td><span class="expand-icon">+</span>
+<strong style="color:lime;">${first}</strong>: ${last}
                     </td>
                     <td>${ev.eventTime}</td>
                     <td><span class="${statusClass}">${status}</span></td>
@@ -228,9 +219,8 @@
                     channelRow.dataset.event = evId;
                     channelRow.style.display = 'none';
                     channelRow.innerHTML = `
-                        <td></td>
-                        <td colspan="2">${ch.name}</td>
-                        <td></td>
+
+                       <td colspan="2"><strong style="color:#0088cc;">${ch.name}</strong></td>
                         <td>
                             <a href="#" class="stream-btn">
                                 <i class="fas fa-play"></i> Play
