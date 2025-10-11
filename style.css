@@ -57,6 +57,7 @@
         
         .json-table tr:nth-child(even) {
             background-color: rgba(40, 40, 40, 0.6);
+                  border: 1px solid #333;
         }
         
         .json-table tr:hover {
