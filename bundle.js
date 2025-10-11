@@ -1,473 +1,234 @@
-       // Global variables
-        let allChannels = [];
-        let scheduleData = null;
-        let currentCategory = null;
-        let expandedRows = new Set(); // Initialize as empty to collapse all by default
+    // Global variables
+    let allChannels = [];
+    let scheduleData = null;
+    let expandedRows = new Set(); // Start collapsed by default
 
-        // Animate the logo
-        function animateLogo() {
-            let gdpElement = document.getElementById('gdp');
-            if (!gdpElement) return;
+    // Animate the logo
+    function animateLogo() {
+        let gdpElement = document.getElementById('gdp');
+        if (!gdpElement) return;
 
-            let chars = [...gdpElement.textContent];
-            gdpElement.innerHTML = chars.map(c => `<span>${c}</span>`).join('');
+        let chars = [...gdpElement.textContent];
+        gdpElement.innerHTML = chars.map(c => `<span>${c}</span>`).join('');
+        let spans = document.querySelectorAll('#gdp span');
+        let i = 0;
+        setInterval(() => {
+            spans.forEach((s, idx) => s.style.color = idx === i ? 'white' : '#039be5');
+            i = (i + 1) % spans.length;
+        }, 100);
+    }
 
-            let spans = document.querySelectorAll('#gdp span');
-            let i = 0;
-            setInterval(() => {
-                spans.forEach((s, idx) => s.style.color = idx === i ? 'white' : '#039be5');
-                i = (i + 1) % spans.length;
-            }, 100);
-        }
+    // Fetch schedule data
+    async function fetchSchedule() {
+        const url = 'https://wasitv-pro.site/daddycors.php';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed ${res.status}`);
+        return res.json();
+    }
 
-        // Fetch schedule data from real API
-        async function fetchSchedule() {
-            // Using the same URL as in the original script
-            const url = 'https://wasitv-pro.site/daddycors.php';
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    }
+    // Extract all channels from the JSON data
+    function extractChannelsFromData(data) {
+        const channels = [];
+        const today = Object.keys(data)[0];
+        const categories = Object.keys(data[today]);
+
+        categories.forEach(category => {
+            const events = data[today][category];
+            events.forEach(event => {
+                const addChannel = ch => channels.push({
+                    name: ch.channel_name,
+                    category,
+                    eventName: event.event,
+                    eventTime: event.time,
+                    channelId: ch.channel_id
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                return data;
-            } catch (err) {
-                console.error('Error fetching schedule:', err);
-                throw err;
-            }
-        }
-
-        // Extract all channels from the JSON data
-        function extractChannelsFromData(data) {
-            const channels = [];
-            const today = Object.keys(data)[0];
-            const categories = Object.keys(data[today]);
-            
-            categories.forEach(category => {
-                const events = data[today][category];
-                
-                events.forEach(event => {
-                    // Handle channels array
-                    if (event.channels && event.channels.length > 0) {
-                        event.channels.forEach(channel => {
-                            channels.push({
-                                name: channel.channel_name,
-                                category: category,
-                                url: `${channel.channel_id}`,
-                                eventName: event.event,
-                                eventTime: event.time,
-                                channelId: channel.channel_id
-                            });
-                        });
-                    }
-                    
-                    // Handle channels2 array if exists
-                    if (event.channels2 && event.channels2.length > 0) {
-                        event.channels2.forEach(channel => {
-                            channels.push({
-                                name: channel.channel_name,
-                                category: category,
-                                url: `${channel.channel_id}`,
-                                eventName: event.event,
-                                eventTime: event.time,
-                                channelId: channel.channel_id
-                            });
-                        });
-                    }
-                });
+                if (event.channels) event.channels.forEach(addChannel);
+                if (event.channels2) event.channels2.forEach(addChannel);
             });
-            
-            return channels;
-        }
+        });
 
-        // Group channels by event to handle multiple streams
-        function groupChannelsByEvent(channels) {
-            const eventsMap = new Map();
-            
-            channels.forEach(channel => {
-                const eventKey = `${channel.eventName || 'Unknown Event'}-${channel.eventTime || 'Unknown Time'}-${channel.category}`;
-                
-                if (!eventsMap.has(eventKey)) {
-                    eventsMap.set(eventKey, {
-                        eventName: channel.eventName,
-                        eventTime: channel.eventTime,
-                        category: channel.category,
-                        channels: []
-                    });
-                }
-                
-                eventsMap.get(eventKey).channels.push({
-                    name: channel.name,
-                    url: channel.url,
-                    channelId: channel.channelId
-                });
+        return channels;
+    }
+
+    function groupChannelsByEvent(channels) {
+        const map = new Map();
+        channels.forEach(ch => {
+            const key = `${ch.category}-${ch.eventName}-${ch.eventTime}`;
+            if (!map.has(key)) map.set(key, {
+                category: ch.category,
+                eventName: ch.eventName,
+                eventTime: ch.eventTime,
+                channels: []
             });
-            
-            return Array.from(eventsMap.values());
-        }
-        
-        // Get event status based on time
-        function getEventStatus(eventTime) {
-            if (!eventTime) return 'Upcoming';
-            
-            if (eventTime.toLowerCase().includes('live')) {
-                return 'LIVE';
-            }
-            
-            const now = new Date();
-            let eventDate = new Date();
-            
-            const timeMatch = eventTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
-            if (timeMatch) {
-                let hours = parseInt(timeMatch[1]);
-                const minutes = parseInt(timeMatch[2]);
-                const period = timeMatch[3];
-                
-                // Convert to 24-hour format
-                if (period && period.toLowerCase() === 'pm' && hours < 12) {
-                    hours += 12;
-                } else if (period && period.toLowerCase() === 'am' && hours === 12) {
-                    hours = 0;
-                }
-                
-                // Shift from UTC to local (Pakistan Standard Time UTC+5)
-                let localHours = (hours + 5) % 24;
-                
-                if (hours + 5 >= 24) {
-                    eventDate.setDate(eventDate.getDate() + 1);
-                }
-                
-                eventDate.setHours(localHours, minutes, 0, 0);
-                
-                const timeDiff = eventDate - now;
-                const hoursDiff = timeDiff / (1000 * 60 * 60);
-                
-                if (hoursDiff < -2) {
-                    return 'Completed';
-                } else if (hoursDiff < 0.5 && hoursDiff > -2) {
-                    return 'LIVE';
-                } else {
-                    return 'Upcoming';
-                }
-            } else {
-                return 'Upcoming';
-            }
-        }
+            map.get(key).channels.push(ch);
+        });
+        return Array.from(map.values());
+    }
 
-        // Format time for display
-        function formatEventTime(eventTime) {
-            if (!eventTime) return 'Time not available';
-            
-            if (eventTime.includes('LIVE') || eventTime.includes('Completed')) {
-                return eventTime;
-            }
-            
-            const timeMatch = eventTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
-            if (timeMatch) {
-                let hours = parseInt(timeMatch[1]);
-                const minutes = parseInt(timeMatch[2]);
-                let period = timeMatch[3] ? timeMatch[3].toUpperCase() : '';
-                
-                if (!period && hours >= 12) {
-                    period = 'PM';
-                    if (hours > 12) hours -= 12;
-                } else if (!period && hours < 12) {
-                    period = 'AM';
-                    if (hours === 0) hours = 12;
-                } else if (period && hours === 0) {
-                    hours = 12;
-                } else if (period && period.toUpperCase() === 'PM' && hours < 12) {
-                    hours += 12;
-                    if (hours > 12) hours -= 12;
-                }
-                
-                return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
-            }
-            
-            return eventTime;
-        }
+    function getEventStatus(eventTime) {
+        if (!eventTime) return 'Upcoming';
+        if (eventTime.toLowerCase().includes('live')) return 'LIVE';
 
-        // Toggle row expansion
-        function toggleRowExpansion(rowId) {
-            const row = document.getElementById(rowId);
-            const icon = row.querySelector('.expand-icon');
-            
-            if (expandedRows.has(rowId)) {
-                // Collapse
-                expandedRows.delete(rowId);
-                icon.textContent = '+';
-                icon.classList.remove('expanded');
-                icon.classList.add('collapsed');
-                
-                // Hide child rows
-                let nextRow = row.nextElementSibling;
-                while (nextRow && nextRow.classList.contains('channel-row')) {
-                    nextRow.style.display = 'none';
-                    nextRow = nextRow.nextElementSibling;
-                }
-            } else {
-                // Expand
-                expandedRows.add(rowId);
-                icon.textContent = '-';
-                icon.classList.remove('collapsed');
-                icon.classList.add('expanded');
-                
-                // Show child rows
-                let nextRow = row.nextElementSibling;
-                while (nextRow && nextRow.classList.contains('channel-row')) {
-                    nextRow.style.display = '';
-                    nextRow = nextRow.nextElementSibling;
-                }
-            }
-        }
+        const now = new Date();
+        let eventDate = new Date();
+        const match = eventTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
+        if (!match) return 'Upcoming';
 
-        // Toggle category expansion
-        function toggleCategoryExpansion(category) {
-            const categoryId = `cat-${category}`;
-            const categoryRows = document.querySelectorAll(`.event-row, .channel-row`);
-            
-            if (expandedRows.has(categoryId)) {
-                // Collapse category
-                expandedRows.delete(categoryId);
-                document.querySelector(`.expand-icon[onclick="toggleCategoryExpansion('${category}')"]`).textContent = '+';
-                
-                // Hide all rows in this category
-                let inCategory = false;
-                categoryRows.forEach(row => {
-                    if (row.previousElementSibling?.classList.contains('category-row') && 
-                        row.previousElementSibling.textContent.includes(category)) {
-                        inCategory = true;
-                    }
-                    
-                    if (inCategory) {
-                        row.style.display = 'none';
-                    }
-                    
-                    if (row.classList.contains('category-row') && 
-                        !row.textContent.includes(category)) {
-                        inCategory = false;
-                    }
-                });
-            } else {
-                // Expand category
-                expandedRows.add(categoryId);
-                document.querySelector(`.expand-icon[onclick="toggleCategoryExpansion('${category}')"]`).textContent = '-';
-                
-                // Show all rows in this category
-                let inCategory = false;
-                categoryRows.forEach(row => {
-                    if (row.previousElementSibling?.classList.contains('category-row') && 
-                        row.previousElementSibling.textContent.includes(category)) {
-                        inCategory = true;
-                    }
-                    
-                    if (inCategory) {
-                        row.style.display = '';
-                    }
-                    
-                    if (row.classList.contains('category-row') && 
-                        !row.textContent.includes(category)) {
-                        inCategory = false;
-                    }
-                });
-            }
-        }
+        let h = parseInt(match[1]);
+        const m = parseInt(match[2]);
+        const p = match[3];
+        if (p && p.toLowerCase() === 'pm' && h < 12) h += 12;
+        if (p && p.toLowerCase() === 'am' && h === 12) h = 0;
+        let localHours = (h + 5) % 24;
+        if (h + 5 >= 24) eventDate.setDate(eventDate.getDate() + 1);
+        eventDate.setHours(localHours, m, 0, 0);
+        const diff = eventDate - now;
+        const hrs = diff / 3600000;
+        if (hrs < -2) return 'Completed';
+        if (hrs < 0.5 && hrs > -2) return 'LIVE';
+        return 'Upcoming';
+    }
 
-        // Render the JSON tree table
-        function renderJsonTable() {
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-            
-            const keyword = document.getElementById('search').value.toLowerCase().trim();
-            
-            // Filter and group channels
-            let filteredChannels = allChannels.filter(channel => 
-                (channel.name.toLowerCase().includes(keyword) || 
-                 channel.category.toLowerCase().includes(keyword) ||
-                 (channel.eventName && channel.eventName.toLowerCase().includes(keyword)))
-            );
-            
-            // Group channels by event
-            const groupedEvents = groupChannelsByEvent(filteredChannels);
-            
-            if (groupedEvents.length === 0) {
-                document.getElementById('noResults').classList.remove('d-none');
-                document.getElementById('channelTable').style.display = 'none';
-            } else {
-                document.getElementById('noResults').classList.add('d-none');
-                document.getElementById('channelTable').style.display = 'table';
-            }
-            
-            // Group by category
-            const categories = {};
-            groupedEvents.forEach(event => {
-                if (!categories[event.category]) {
-                    categories[event.category] = [];
-                }
-                categories[event.category].push(event);
+    function toggleCategoryExpansion(category) {
+        const id = `cat-${category}`;
+        const icon = document.getElementById(`${id}-icon`);
+        const eventRows = document.querySelectorAll(`[data-category="${category}"].event-row`);
+        const isExpanded = expandedRows.has(id);
+
+        if (isExpanded) {
+            expandedRows.delete(id);
+            icon.textContent = '+';
+            eventRows.forEach(r => {
+                r.style.display = 'none';
+                const eventId = r.getAttribute('id');
+                expandedRows.delete(eventId);
+                document.querySelectorAll(`[data-event="${eventId}"]`).forEach(ch => ch.style.display = 'none');
+                const evIcon = document.querySelector(`#${eventId} .expand-icon`);
+                if (evIcon) evIcon.textContent = '+';
             });
-            
-            let rowId = 0;
-            
-            // Create rows for each category and event
-            Object.keys(categories).forEach(category => {
-                // Category row - always starts collapsed with "+"
-                const categoryRow = document.createElement('tr');
-                categoryRow.className = 'category-row';
-                categoryRow.innerHTML = `
-                    <td colspan="5">
-                        <span class="expand-icon collapsed" 
-                              onclick="toggleCategoryExpansion('${category}')">
-                            +
-                        </span>
-                        <strong>${category}</strong>
+        } else {
+            expandedRows.add(id);
+            icon.textContent = '-';
+            eventRows.forEach(r => r.style.display = '');
+        }
+    }
+
+    function toggleEventExpansion(eventId) {
+        const icon = document.querySelector(`#${eventId} .expand-icon`);
+        const channelRows = document.querySelectorAll(`[data-event="${eventId}"]`);
+        const isExpanded = expandedRows.has(eventId);
+
+        if (isExpanded) {
+            expandedRows.delete(eventId);
+            icon.textContent = '+';
+            channelRows.forEach(r => r.style.display = 'none');
+        } else {
+            expandedRows.add(eventId);
+            icon.textContent = '-';
+            channelRows.forEach(r => r.style.display = '');
+        }
+    }
+
+    function openChannelModal(title, id) {
+        const modal = document.getElementById('channelModal');
+        const iframe = document.getElementById('channelIframe');
+        const titleEl = document.getElementById('channelTitle');
+        iframe.src = `https://ddlive.streamit.workers.dev/?cid=${id}`;
+        titleEl.textContent = title;
+        modal.style.display = 'block';
+    }
+
+    function renderTable(events) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        const categories = [...new Set(events.map(e => e.category))];
+
+        categories.forEach(category => {
+            // Category row
+            const catId = `cat-${category}`;
+            const catRow = document.createElement('tr');
+            catRow.className = 'category-row';
+            catRow.innerHTML = `
+                <td colspan="5">
+                    <span class="expand-icon" id="${catId}-icon" onclick="toggleCategoryExpansion('${category}')">+</span>
+                    ${category}
+                </td>`;
+            tbody.appendChild(catRow);
+
+            events.filter(e => e.category === category).forEach((ev, i) => {
+                const evId = `ev-${category}-${i}`;
+                const status = getEventStatus(ev.eventTime);
+                const statusClass = status === 'LIVE' ? 'status-live' :
+                                    status === 'Upcoming' ? 'status-upcoming' : 'status-completed';
+
+                // Event row (hidden by default)
+                const eventRow = document.createElement('tr');
+                eventRow.className = 'event-row';
+                eventRow.id = evId;
+                eventRow.dataset.category = category;
+                eventRow.style.display = 'none';
+                eventRow.innerHTML = `
+                    <td></td>
+                    <td>
+                        <span class="expand-icon" onclick="toggleEventExpansion('${evId}')">+</span>
+                        ${ev.eventName}
                     </td>
+                    <td>${ev.eventTime}</td>
+                    <td><span class="${statusClass}">${status}</span></td>
+                    <td>${ev.channels.length} Streams</td>
                 `;
-                tableBody.appendChild(categoryRow);
-                
-                // Event rows for this category - initially hidden
-                categories[category].forEach(event => {
-                    const eventStatus = getEventStatus(event.eventTime);
-                    const formattedTime = formatEventTime(event.eventTime);
-                    const statusClass = `status-${eventStatus.toLowerCase()}`;
-                    
-                    const eventId = `event-${rowId++}`;
-                    const eventRow = document.createElement('tr');
-                    eventRow.id = eventId;
-                    eventRow.className = 'event-row';
-                    eventRow.style.display = 'none'; // Hidden by default
-                    eventRow.innerHTML = `
+                tbody.appendChild(eventRow);
+
+                // Channel rows (hidden by default)
+                ev.channels.forEach(ch => {
+                    const channelRow = document.createElement('tr');
+                    channelRow.className = 'channel-row';
+                    channelRow.dataset.event = evId;
+                    channelRow.style.display = 'none';
+                    channelRow.innerHTML = `
+                        <td></td>
+                        <td colspan="2">${ch.name}</td>
                         <td></td>
                         <td>
-                            <span class="expand-icon collapsed" 
-                                  onclick="toggleRowExpansion('${eventId}')">
-                                +
-                            </span>
-                            ${event.eventName || 'Unknown Event'}
+                            <a href="#" class="stream-btn" onclick="openChannelModal('${ch.name}', '${ch.channelId}')">
+                                <i class="fas fa-play"></i> Play
+                            </a>
                         </td>
-                        <td>${formattedTime}</td>
-                        <td><span class="${statusClass}">${eventStatus}</span></td>
-                        <td>${event.channels.length} stream${event.channels.length !== 1 ? 's' : ''}</td>
                     `;
-                    tableBody.appendChild(eventRow);
-                    
-                    // Channel rows for this event - initially hidden
-                    event.channels.forEach(channel => {
-                        const channelRow = document.createElement('tr');
-                        channelRow.className = 'channel-row';
-                        channelRow.style.display = 'none'; // Hidden by default
-                        channelRow.innerHTML = `
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td>
-                                <a href="#" data-url="${channel.url}" data-name="${channel.name}" 
-                                   class="stream-btn open-channel">
-                                    ${channel.name}
-                                </a>
-                            </td>
-                        `;
-                        tableBody.appendChild(channelRow);
-                    });
+                    tbody.appendChild(channelRow);
                 });
             });
-            
-            // Add event listeners to channel buttons
-            document.querySelectorAll('.open-channel').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    openChannelViewer(this.dataset.url, this.dataset.name);
-                });
-            });
-            
-            updateResultCount(groupedEvents.length);
-        }
-
-        // Update result count
-        function updateResultCount(count) {
-            const resultElement = document.getElementById('resultCount');
-            resultElement.textContent = count === 1 ? 
-                `Showing ${count} event` : 
-                `Showing ${count} events`;
-        }
-
-        // Open viewer in modal
-        function openChannelViewer(id, name) {
-            const modal = document.getElementById('channelModal');
-            const iframe = document.getElementById('channelIframe');
-            const title = document.getElementById('channelTitle');
-            
-            // Set modal content
-            title.textContent = name;
-            iframe.src = `https://ddlive.streamit.workers.dev/?cid=${id}&autoplay=1`;
-            
-            // Show modal
-            modal.style.display = 'block';
-            
-            // Prevent body scroll
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close modal
-        function closeModal() {
-            const modal = document.getElementById('channelModal');
-            const iframe = document.getElementById('channelIframe');
-            
-            // Reset iframe source to stop playback
-            iframe.src = '';
-            
-            // Hide modal
-            modal.style.display = 'none';
-            
-            // Restore body scroll
-            document.body.style.overflow = 'auto';
-        }
-
-        // DOM Ready
-        document.addEventListener('DOMContentLoaded', function() {
-            animateLogo();
-
-            // Setup modal close button
-            document.querySelector('#channelModal .close').addEventListener('click', closeModal);
-            
-            // Close modal when clicking outside content
-            window.addEventListener('click', function(event) {
-                const modal = document.getElementById('channelModal');
-                if (event.target === modal) {
-                    closeModal();
-                }
-            });
-            
-            // Close modal with Escape key
-            document.addEventListener('keydown', function(event) {
-                if (event.key === 'Escape') {
-                    closeModal();
-                }
-            });
-
-            fetchSchedule()
-                .then(data => {
-                    scheduleData = data;
-                    allChannels = extractChannelsFromData(data);
-                    renderJsonTable();
-                    document.getElementById('loadingSpinner').classList.add('d-none');
-                })
-                .catch(err => {
-                    console.error('Failed to load schedule data:', err);
-                    document.getElementById('loadingSpinner').classList.add('d-none');
-                    document.getElementById('errorMessage').classList.remove('d-none');
-                    document.getElementById('errorDetails').textContent = err.message || 'Failed to load channels from the API.';
-                });
-            
-            // Add event listener for search input
-            document.getElementById('search').addEventListener('input', renderJsonTable);
         });
+    }
+
+    // Channel modal close
+    document.querySelector('#channelModal .close').onclick = () => {
+        document.getElementById('channelModal').style.display = 'none';
+        document.getElementById('channelIframe').src = '';
+    };
+    window.onclick = e => {
+        if (e.target === document.getElementById('channelModal')) {
+            document.getElementById('channelModal').style.display = 'none';
+            document.getElementById('channelIframe').src = '';
+        }
+    };
+
+    async function init() {
+        animateLogo();
+        try {
+            const data = await fetchSchedule();
+            scheduleData = data;
+            allChannels = extractChannelsFromData(data);
+            const grouped = groupChannelsByEvent(allChannels);
+            renderTable(grouped);
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('resultCount').textContent = `${grouped.length} Events Loaded`;
+        } catch (err) {
+            console.error(err);
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('errorMessage').classList.remove('d-none');
+        }
+    }
+
+    init();
