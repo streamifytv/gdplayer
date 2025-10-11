@@ -90,6 +90,7 @@
         
         .event-row {
             background: rgba(50, 50, 50, 0.7) !important;
+                        white-space: nowrap;
         }
         
         .channel-row {
