@@ -32,7 +32,7 @@
     }
 
     // Extract all channels from the JSON data
-    function extractChannelsFromData(data) {
+function extractChannelsFromData(data) {
     const channels = [];
     const today = Object.keys(data)[0];
     const categories = Object.keys(data[today]);
@@ -227,11 +227,12 @@ function getEventStatus(eventTime) {
                 ev.channels.forEach(ch => {
                     const channelRow = document.createElement('tr');
                     channelRow.className = 'channel-row';
+                    
                     channelRow.dataset.event = evId;
                     channelRow.style.display = 'none';
                     channelRow.innerHTML = `
 
-                       <td colspan="2" class="stream-btn"><strong><i class="fas fa-play"></i> ${ch.name}</strong></td>
+                       <td colspan="2" class="stream-btn"><strong style=""><i class="fas fa-play"></i>${ch.name}</strong></td>
                         <td>
                             <a href="#" class="stream-btn">
                                 <i class="fas fa-play"></i> Play
