@@ -33,28 +33,39 @@
 
     // Extract all channels from the JSON data
     function extractChannelsFromData(data) {
-        const channels = [];
-        const today = Object.keys(data)[0];
-        const categories = Object.keys(data[today]);
+    const channels = [];
+    const today = Object.keys(data)[0];
+    const categories = Object.keys(data[today]);
 
-        categories.forEach(category => {
-            const events = data[today][category];
-            events.forEach(event => {
-                const addChannel = ch => channels.push({
-                    name: ch.channel_name,
-                    category,
-                    eventName: event.event,
-                    eventTime: event.time,
-                    channelId: ch.channel_id
-                });
+    categories.forEach(category => {
+        const events = data[today][category];
 
-                if (event.channels) event.channels.forEach(addChannel);
-                if (event.channels2) event.channels2.forEach(addChannel);
+        events.forEach(event => {
+            const addChannel = ch => channels.push({
+                name: ch.channel_name,
+                category,
+                eventName: event.event,
+                eventTime: event.time,
+                channelId: ch.channel_id
             });
-        });
 
-        return channels;
-    }
+            if (Array.isArray(event.channels)) {
+                event.channels.forEach(addChannel);
+            } else if (event.channels) {
+                // if it's a single object, handle it too
+                addChannel(event.channels);
+            }
+
+            if (Array.isArray(event.channels2)) {
+                event.channels2.forEach(addChannel);
+            } else if (event.channels2) {
+                addChannel(event.channels2);
+            }
+        });
+    });
+
+    return channels;
+}
 
     function groupChannelsByEvent(channels) {
         const map = new Map();
