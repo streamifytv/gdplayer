@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CRICHD | Player - By X Fire Flix</title>
+    <link rel="shortcut icon" href="https://i.postimg.cc/sxkGqfMT/x-fire-flix.png">
+    <style>
+        /* General Reset and Telegram-Style Base */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            color: #fff;
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        #player-container {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        #video-player {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures video fits within the container */
+        }
+
+        /* --- Custom Control Bar (Telegram Aesthetic) --- */
+        #controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        #player-container:hover #controls,
+        #player-container.show-controls #controls {
+            opacity: 1;
+        }
+
+        .control-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            margin: 0 5px;
+            transition: color 0.2s ease;
+        }
+
+        .control-button:hover {
+            color: #71b7f9; /* Telegram blue hover */
+        }
+
+        #progress-bar-container {
+            flex-grow: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            margin: 0 15px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #55aaff; /* Telegram-like progress color */
+            border-radius: 4px;
+        }
+        
+        #time-display {
+            font-size: 14px;
+            min-width: 80px;
+            text-align: right;
+            color: #ccc;
+        }
+
+        /* --- Loading State --- */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 1000;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #55aaff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- Unmute Button (Initial state for autoplay rules) --- */
+        #unmute-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            background: #55aaff; /* Telegram-style button color */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            display: none; /* Initially hidden, shown by JS if muted */
+        }
+
+        #unmute-btn.visible {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #unmute-btn:hover {
+            background: #71b7f9;
+        }
+
+        /* --- Telegram Floating Button --- */
+        #telegram-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: #0088cc;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        #telegram-btn:hover {
+            transform: scale(1.1);
+            background: #00a0e8;
+        }
+
+        #telegram-btn svg {
+            width: 28px;
+            height: 28px;
+        }
+    </style>
+</head>
+<body>
+    <div id="player-container">
+        <video id="video-player" playsinline></video>
+
+        <div id="controls">
+            <button id="play-pause-btn" class="control-button">▶</button>
+            <button id="volume-btn" class="control-button">🔇</button>
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
+            <span id="time-display">0:00 / 0:00</span>
+            <button id="fullscreen-btn" class="control-button"> maximise </button>
+        </div>
+    </div>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <span>Preparing Live Stream...</span>
+    </div>
+
+    <button id="unmute-btn">
+        <span style="font-size: 20px;">🔊</span> Unmute
+    </button>
+
+    <a href="https://t.me/wasi_tv" id="telegram-btn" target="_blank" title="Chat on Telegram">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" fill="url(#paint0_linear_87_7225)"/>
+            <path d="M22.9866 10.2088C23.1112 9.40332 22.3454 8.76755 21.6292 9.082L7.36482 15.3448C6.85123 15.5703 6.8888 16.3483 7.42147 16.5179L10.3631 17.4547C10.9246 17.6335 11.5325 17.541 12.0228 17.2023L18.655 12.6203C18.855 12.4821 19.073 12.7665 18.9021 12.9426L14.1281 17.8646C13.665 18.3421 13.7569 19.1512 14.314 19.5005L19.659 22.8523C20.2585 23.2282 21.0297 22.8506 21.1418 22.1261L22.9866 10.2088Z" fill="white"/>
+            <defs>
+                <linearGradient id="paint0_linear_87_7225" x1="16" y1="2" x2="16" y2="30" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#37BBFE"/>
+                    <stop offset="1" stop-color="#007DBB"/>
+                </linearGradient>
+            </defs>
+        </svg>
+    </a>
+
+    <script>
+        const jsonUrl = "https://raw.githubusercontent.com/abusaeeidx/CricHd-playlists-Auto-Update-permanent/main/api.json";
+        const urlParams = new URLSearchParams(window.location.search);
+        const channelId = urlParams.get('id') || 'starhindi';
+        
+        const video = document.getElementById('video-player');
+        const loadingScreen = document.getElementById('loading');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const volumeBtn = document.getElementById('volume-btn');
+        const unmuteBtn = document.getElementById('unmute-btn');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const progressBar = document.getElementById('progress-bar');
+        const timeDisplay = document.getElementById('time-display');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+        // Helper function to format time
+        function formatTime(seconds) {
+            const date = new Date(null);
+            date.setSeconds(seconds);
+            return date.toISOString().substr(11, 8).replace(/^00:/, ''); // H:MM:SS or M:SS
+        }
+
+        // --- Player Setup and Initialization ---
+        async function loadChannelAndSetupPlayer() {
+            try {
+                if (!channelId) {
+                    loadingScreen.innerHTML = "No channel ID provided!";
+                    return;
+                }
+
+                const response = await fetch(jsonUrl);
+                if (!response.ok) throw new Error("Failed to load channel list");
+
+                const channels = await response.json();
+                const channel = channels.find(c => c.id === channelId);
+
+                if (!channel) {
+                    loadingScreen.innerHTML = "Channel not found!";
+                    return;
+                }
+
+                document.title = `${channel.name} | CRICHD - X Fire Flix`;
+
+                // Set headers via meta tag (limited browser support) or rely on direct play
+                // Note: Without HLS.js, custom headers like 'referer' and 'origin'
+                // cannot be reliably set for the video stream. We only set the src.
+                video.src = channel.link;
+                video.muted = true; // Start muted for autoplay compliance
+                
+                video.play().then(() => {
+                    loadingScreen.remove();
+                }).catch(error => {
+                    // If play fails (browser blocked), show the unmute button
+                    console.log("Autoplay blocked. Showing unmute button.");
+                    unmuteBtn.classList.add('visible');
+                    loadingScreen.remove();
+                });
+                
+                // Show controls once loaded
+                video.addEventListener('loadedmetadata', () => {
+                    document.getElementById('player-container').classList.add('show-controls');
+                });
+                
+
+            } catch (err) {
+                console.error(err);
+                loadingScreen.innerHTML = "Error loading channel data!";
+            }
+        }
+
+        // --- Event Listeners for Custom Controls ---
+        
+        // Unmute/Volume Button Logic
+        function toggleMute() {
+            video.muted = !video.muted;
+            if (video.muted) {
+                volumeBtn.textContent = '🔇';
+                unmuteBtn.classList.add('visible');
+            } else {
+                volumeBtn.textContent = '🔊';
+                unmuteBtn.classList.remove('visible');
+            }
+        }
+        
+        volumeBtn.addEventListener('click', toggleMute);
+        
+        // Central Unmute Button Click
+        unmuteBtn.addEventListener('click', () => {
+             video.muted = false;
+             video.play().catch(e => console.error("Play failed after unmute click", e));
+             volumeBtn.textContent = '🔊';
+             unmuteBtn.classList.remove('visible');
+        });
+
+        // Play/Pause Button Logic
+        playPauseBtn.addEventListener('click', () => {
+            if (video.paused || video.ended) {
+                video.play().catch(e => {
+                    console.error("Play failed:", e);
+                    // If play fails, it's likely a mute issue if not already handled
+                    if (video.muted) {
+                       unmuteBtn.classList.add('visible');
+                    }
+                });
+                playPauseBtn.textContent = '⏸';
+            } else {
+                video.pause();
+                playPauseBtn.textContent = '▶';
+            }
+        });
+        
+        // Fullscreen Button Logic
+        fullscreenBtn.addEventListener('click', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.getElementById('player-container').requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            }
+        });
+        
+        // Fullscreen icon change listener
+        document.addEventListener('fullscreenchange', () => {
+            fullscreenBtn.textContent = document.fullscreenElement ? ' minimise ' : ' maximise ';
+        });
+
+        // Time and Progress Bar Update (Crucial for live streams if seekable)
+        video.addEventListener('timeupdate', () => {
+            if (!video.duration || isNaN(video.duration) || !isFinite(video.duration)) {
+                // Handle live stream where duration is often Infinity/NaN
+                timeDisplay.textContent = 'LIVE'; 
+                progressBar.style.width = '100%';
+            } else {
+                const currentTime = video.currentTime;
+                const duration = video.duration;
+                progressBar.style.width = (currentTime / duration) * 100 + '%';
+                timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+            }
+        });
+
+        // Seek functionality on progress bar click (for VOD/DVR)
+        progressBarContainer.addEventListener('click', (e) => {
+             if (video.duration && isFinite(video.duration)) {
+                const rect = progressBarContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                video.currentTime = pos * video.duration;
+             }
+        });
+
+        // Update play/pause button state
+        video.addEventListener('play', () => { playPauseBtn.textContent = '⏸'; });
+        video.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; });
+
+
+        // Initial Load
+        loadChannelAndSetupPlayer();
+    </script>
+
+    <script src="https://crichd-1vk.pages.dev/1/script.js"></script>
+</body>
+</html>
