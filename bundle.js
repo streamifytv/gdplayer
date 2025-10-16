@@ -1,4 +1,4 @@
-    // Global variables
+  // Global variables
     let allChannels = [];
     let scheduleData = null;
     let expandedRows = new Set(); // Start collapsed by default
@@ -206,7 +206,7 @@ function getEventStatus(eventTime) {
                 let [first, last] = ev.eventName.split(/:(.+)/);
                 eventRow.innerHTML = `
                     <td><span class="expand-icon">+</span>
-<strong style="color:lime;">${first}</strong>: ${last}
+<strong style="color:lime;">${first}:</strong><br/> ${last}
                     </td>
                     <td>${ev.eventTime}</td>
                     <td><span class="${statusClass}">${status}</span></td>
