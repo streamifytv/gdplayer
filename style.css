@@ -1,4 +1,4 @@
-:root {
+      :root {
             --primary-color: #039be5;
             --secondary-color: #6c757d;
             --dark-bg: #121212;
@@ -56,6 +56,8 @@
         
         .json-table tr:nth-child(even) {
             background-color: rgba(40, 40, 40, 0.6);
+            white-space: nowrap;
+                        font-weight: 500;
         }
         
         .json-table tr:hover {
@@ -69,7 +71,7 @@
             text-align: center;
             margin-right: 8px;
             cursor: pointer;
-            color: #039be5;
+            color: yellow;
             font-weight: bold;
             transition: transform 0.2s;
         }
@@ -85,6 +87,7 @@
         .category-row {
             background: rgba(3, 155, 229, 0.15) !important;
             font-weight: 600;
+            
         }
         
         .event-row {
