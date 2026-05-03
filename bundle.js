@@ -25,7 +25,7 @@
 
     // Fetch schedule data
     async function fetchSchedule() {
-        const url = 'https://wasitv-pro.site/daddycors.php';
+        const url = 'https://tv247us.vip/schedule.json';
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Failed ${res.status}`);
         return res.json();
@@ -197,7 +197,7 @@ function getEventStatus(eventTime) {
                 const statusClass = status === 'LIVE' ? 'status-live' :
                                     status === 'Upcoming' ? 'status-upcoming' : 'status-completed';
 
-                // Event row — HIDDEN BY DEFAULT
+                // Event row â HIDDEN BY DEFAULT
                 const eventRow = document.createElement('tr');
                 eventRow.className = 'event-row';
                 eventRow.id = evId;
@@ -223,7 +223,7 @@ function getEventStatus(eventTime) {
                     });
                 }
 
-                // Channel rows — HIDDEN BY DEFAULT
+                // Channel rows â HIDDEN BY DEFAULT
                 ev.channels.forEach(ch => {
                     const channelRow = document.createElement('tr');
                     channelRow.className = 'channel-row';
