@@ -1,8 +1,18 @@
 {
   "main_api_url": "https://daddylive.mov/cache/tv/tv.json",
-  "banner_1_code": "YOUR_ADSTERRA_BANNER_1_CODE",
+  "banner_1_code": "<script>
+  atOptions = {
+    'key' : '325fa464ded151b2d3e69f082e4faa67',
+    'format' : 'iframe',
+    'height' : 250,
+    'width' : 300,
+    'params' : {}
+  };
+</script>
+<script src=\"https://www.highperformanceformat.com/325fa464ded151b2d3e69f082e4faa67/invoke.js\"></script>
+",
   "banner_2_code": "YOUR_ADSTERRA_BANNER_2_CODE",
-  "direct_smart_link_url": "YOUR_DIRECT_SMART_LINK_URL",
+  "direct_smart_link_url": "https://www.effectivecpmnetwork.com/j53a8ki39?key=b48a2f06a5b2094acea3b18e0c7f9e5f",
   "direct_ad_enabled": true,
   "direct_ad_min_delay_sec": 30,
   "direct_ad_max_delay_sec": 90
