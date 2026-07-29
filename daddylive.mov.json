@@ -1,0 +1,9 @@
+{
+  "main_api_url": "https://daddylive.mov/cache/tv/tv.json",
+  "banner_1_code": "YOUR_ADSTERRA_BANNER_1_CODE",
+  "banner_2_code": "YOUR_ADSTERRA_BANNER_2_CODE",
+  "direct_smart_link_url": "YOUR_DIRECT_SMART_LINK_URL",
+  "direct_ad_enabled": true,
+  "direct_ad_min_delay_sec": 30,
+  "direct_ad_max_delay_sec": 90
+}
